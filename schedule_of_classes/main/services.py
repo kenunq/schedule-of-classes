@@ -1,6 +1,8 @@
+#подключаем необходимы библиотеки
 import os
 import threading
 import time
+import shutil
 import requests
 from urllib.parse import urlencode
 from urllib.request import urlopen
@@ -10,6 +12,7 @@ from openpyxl import load_workbook
 
 
 def get_json(filename, find):
+    '''Функция для создания JSON объекта путем парсинга excel таблицы'''
     book = load_workbook(filename='E:/schedule-of-classes/schedule_of_classes/static/other/Pасписание/' + filename)
     ws = book.active
     # namep = (os.path.basename(filename))
@@ -41,13 +44,15 @@ def get_json(filename, find):
     lenght = len(masstime)
 
     pre_result = {}
-
+    #заполняем словарь данными
     for i in range(lenght):
         pre_result[i] = {'Время: ': str(masstime[i]), 'Предмет и преподаватель: ': str(masssur[i]),
                          'Группа: ': str(massgr[i]), 'Кабинет: ': str(masskb[i])}
 
+    #сортируем спарсенные данные по времени
     sotr_dict_key = sorted(pre_result, key=lambda x: int(pre_result[x]['Время: '].split('.')[0]))
 
+    #перезаписываем отсортированные данные в словарь
     result = {}
     for i in range(lenght):
         result[i] = {'Время: ': str(masstime[sotr_dict_key[i]]), 'Предмет и преподаватель: ': str(masssur[sotr_dict_key[i]]),
@@ -57,6 +62,7 @@ def get_json(filename, find):
 
 
 def get_filename_json():
+    '''Функция для получения доступных рассписаний занятий'''
     list_name = os.listdir('E:\schedule-of-classes\schedule_of_classes\static\other\Pасписание')
 
     result = {}
@@ -67,6 +73,7 @@ def get_filename_json():
 
 
 def download_exel(url):
+    '''Функция для скачивания excel таблиц с рассписанием'''
     base_url = 'https://cloud-api.yandex.net/v1/disk/public/resources/download?'
     public_key = url  # Сюда вписываете вашу ссылку
 
@@ -89,16 +96,31 @@ def download_exel(url):
         zip_file.extractall(to_url + '\static\other')
 
 
+def del_from_folder():
+    '''Функция для удаления папки с рассписаниями'''
+    try:
+        list = os.listdir("E:\schedule-of-classes\schedule_of_classes\static\other\Pасписание")
+        if list:
+            shutil.rmtree("E:\schedule-of-classes\schedule_of_classes\static\other\Pасписание")
+    except:
+        print("Folder not found")
+
+
+
 class AsyncActionGetGameChatData(threading.Thread):
+    '''Класс работающий не в основном потоке, который качает excel таблиц с рассписанием'''
 
     def run(self):
         while True:
+            del_from_folder()
             download_exel('https://disk.yandex.ru/d/VNdnX6hmveqJuw')
             print('Скачивание завершилось')
             time.sleep(7200)
 
 
+#создаем экземпляр класса для скачивания excel таблиц
 async_action_get_game_chat_data = AsyncActionGetGameChatData()
 async_action_get_game_chat_data.start()
 
-get_filename_json()
+# get_filename_json()
+
